@@ -2,9 +2,9 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import scipy.io
 
-
-def save_figure(fig, title, directory="figure"):
+def save_figure(fig, title, directory="output/figure"):
     """
     Saves the given figure to the specified directory with the provided title.
     """
@@ -196,13 +196,13 @@ def plot_magnitude_comparison_subplots(pinn, times, x_range=(-5.0, 5.0), filenam
     plt.show()
 
 # Save data to .mat file
-def save_data_to_mat(X, T, real_data, pred_data, error_data, filename="comparison_data.mat"):
+def save_data_to_mat(X, T, real_q, pred_q, error_q, filename="output/predicate_data.mat"):
     data = {
         "X": X,
         "T": T,
-        "real_data": real_data,
-        "pred_data": pred_data,
-        "error_data": error_data
+        "real_q": real_q,
+        "pred_q": pred_q,
+        "error_q": error_q
     }
     scipy.io.savemat(filename, data)
     print(f"Data saved to {filename}")

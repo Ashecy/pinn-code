@@ -10,10 +10,7 @@ from pyDOE import lhs
 from mpl_toolkits.mplot3d import Axes3D
 import time
 import psutil
-
-# Add current directory to system path for module imports
-# sys.path.append(str(Path(__file__).parent))
-# from network import DNN  # Import the neural network module
+import scipy.io
 from utils_plotting import *
 
 # Check if CUDA is available
@@ -25,7 +22,7 @@ torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.enabled = True
 
 # Load data from .mat file
-data = scipy.io.loadmat('NLS-soliton.mat')
+data = scipy.io.loadmat('data/NLS-soliton.mat')
 
 # Extract variables
 X = data['X']
@@ -41,13 +38,18 @@ v = data['v']
 norm_q_real = np.sqrt(u ** 2 + v ** 2)
 
 # Define boundaries
-x_min, x_max = -5.0, 5.0
-t_min, t_max = -0.5, 0.5
+x_min, x_max = x0, x1
+t_min, t_max = t0, t1
 ub = np.array([x_max, t_max])
 lb = np.array([x_min, t_min])
 
 # Sample sizes
 N_ic, N_bc, N_f = 50, 25, 10000
+
+# Convert to torch tensors
+X_tensor = torch.tensor(X.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
+T_tensor = torch.tensor(T.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
+norm_q_real_tensor = torch.tensor(norm_q_real, dtype=torch.float32, device=device)
 
 
 # Generate training data
@@ -129,44 +131,6 @@ def weights_init(m):
 
 
 class PINN:
-    '''
-    def __init__(self, X_ic, uv_ic, X_lb, X_ub, X_sample):
-        self.X_ic, self.uv_ic = X_ic, uv_ic
-        self.X_lb, self.X_ub, self.X_sample = X_lb, X_ub, X_sample
-
-        self.net = DNN(dim_in=2, dim_out=2, n_layer=9, n_node=40, ub=ub, lb=lb).to(device)
-        self.lbfgs = torch.optim.LBFGS(
-            self.net.parameters(),
-            lr=1.0,
-            max_iter=1000,
-            max_eval=500,
-            tolerance_grad=1e-4,
-            tolerance_change=1.0 * np.finfo(float).eps,
-            history_size=50,
-            line_search_fn="strong_wolfe",
-        )
-        self.adam = torch.optim.Adam(self.net.parameters(), lr=1e-3)
-        self.loss_fn = torch.nn.MSELoss()
-        self.losses = {
-            "loss_ic": [],
-            "loss_bc": [],
-            "loss_pde": [],
-            "log10_loss_ic": [],
-            "log10_loss_bc": [],
-            "log10_loss_pde": [],
-            "loss_u": [],
-            "loss_v": [],
-            "loss_fu": [],
-            "loss_fv": [],
-            "log10_loss_u": [],
-            "log10_loss_v": [],
-            "log10_loss_fu": [],
-            "log10_loss_fv": [],
-            "loss_l2": [],
-            "log10_loss_l2": []
-        }
-        self.iter = 0
-    '''
 
     def __init__(self, X_ic, uv_ic, X_lb, X_ub, X_sample, device):
         self.device = device  # 添加 device 属性
@@ -396,9 +360,10 @@ if __name__ == "__main__":
     print(f"Total Optimization Iterations: {iteration + pinn.iter} iterations completed")
 
     # Save model
-    torch.save(pinn.net.state_dict(), "weight.pt")
+    Path("output").mkdir(parents=True, exist_ok=True)
+    torch.save(pinn.net.state_dict(), "output/weight.pt")
 
-    # ============================== 绘图部分 ==============================
+    # ============================== plotting ==============================
 
     # 1. Plot sampling points
     plot_sampling_points(
@@ -489,6 +454,9 @@ if __name__ == "__main__":
     plot_magnitude_comparison_subplots(
         pinn, times=[-0.25, 0, 0.25], filename="magnitude_comparison"
     )
+
+    # Call the function to save data
+    save_data_to_mat(X, T, norm_q_real, norm_q_pred, error_q)
 
     # End timing
     end_time = time.time()
