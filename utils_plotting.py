@@ -194,3 +194,15 @@ def plot_magnitude_comparison_subplots(pinn, times, x_range=(-5.0, 5.0), filenam
     plt.tight_layout()
     save_figure(fig, filename)
     plt.show()
+
+# Save data to .mat file
+def save_data_to_mat(X, T, real_data, pred_data, error_data, filename="comparison_data.mat"):
+    data = {
+        "X": X,
+        "T": T,
+        "real_data": real_data,
+        "pred_data": pred_data,
+        "error_data": error_data
+    }
+    scipy.io.savemat(filename, data)
+    print(f"Data saved to {filename}")
