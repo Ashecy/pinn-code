@@ -24,6 +24,22 @@ print(f"Using device: {device}")
 torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.enabled = True
 
+# Load data from .mat file
+data = scipy.io.loadmat('NLS-soliton.mat')
+
+# Extract variables
+X = data['X']
+T = data['T']
+x0 = data['x0'].item()
+x1 = data['x1'].item()
+t0= data['t0'].item()
+t1 = data['t1'].item()
+u = data['u']
+v = data['v']
+
+# Compute the magnitude of q
+norm_q_real = np.sqrt(u ** 2 + v ** 2)
+
 # Define boundaries
 x_min, x_max = -5.0, 5.0
 t_min, t_max = -0.5, 0.5
