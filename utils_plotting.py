@@ -4,7 +4,9 @@ import numpy as np
 import torch
 import scipy.io
 
-def save_figure(fig, title, directory="output/figure"):
+
+# Save figure
+def save_figure(fig, title, directory=os.path.join("output", "figure")):
     """
     Saves the given figure to the specified directory with the provided title.
     """
@@ -156,7 +158,6 @@ def plot_sampling_points(X_ic, X_lb, X_ub, X_sample, filename="sampling_points")
     plt.show()
 
 
-
 def plot_magnitude_comparison_subplots(pinn, times, x_range=(-5.0, 5.0), filename="magnitude_comparison"):
     """
     Plots the magnitude of the real and predicted solutions |q| at specified times in separate subplots and saves the figure.
@@ -194,6 +195,7 @@ def plot_magnitude_comparison_subplots(pinn, times, x_range=(-5.0, 5.0), filenam
     plt.tight_layout()
     save_figure(fig, filename)
     plt.show()
+
 
 # Save data to .mat file
 def save_data_to_mat(X, T, real_q, pred_q, error_q, filename="output/predicate_data.mat"):
