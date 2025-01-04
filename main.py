@@ -323,8 +323,10 @@ class PINN:
         if torch.cuda.is_available():
             gpu_memory_allocated = torch.cuda.memory_allocated(device) / (1024 ** 2)  # in MB
             gpu_memory_reserved = torch.cuda.memory_reserved(device) / (1024 ** 2)  # in MB
-            print(f"Iteration {iteration}: Memory Usage -> CPU: {memory_usage:.2f} MB, "
-                  f"GPU Allocated: {gpu_memory_allocated:.2f} MB, GPU Reserved: {gpu_memory_reserved:.2f} MB")
+            elapsed_time = time.time() - start_time
+            print(f"Memory Usage -> CPU: {memory_usage:.2f} MB, "
+                  f"GPU Allocated: {gpu_memory_allocated:.2f} MB, GPU Reserved: {gpu_memory_reserved:.2f} MB, "
+                  f"Elapsed Time: {elapsed_time:.2f} seconds")
         else:
             print(f"Iteration {iteration}: Memory Usage -> CPU: {memory_usage:.2f} MB")
 
