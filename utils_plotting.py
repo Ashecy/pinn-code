@@ -198,7 +198,7 @@ def plot_magnitude_comparison_subplots(pinn, times, x_range=(-5.0, 5.0), filenam
 
 
 # Save data to .mat file
-def save_data_to_mat(X, T, real_q, pred_q, error_q, filename="output/predicate_data.mat"):
+def save_data_to_mat(X, T, real_q, pred_q, error_q, filename=os.path.join("output", "predicate_data.mat")):
     data = {
         "X": X,
         "T": T,
