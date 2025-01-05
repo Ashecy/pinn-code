@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import grad
 from pyDOE import lhs
-
+from tabulate import tabulate
 from mpl_toolkits.mplot3d import Axes3D
 import time
 import psutil
@@ -22,17 +22,21 @@ torch.backends.cudnn.benchmark = True
 torch.backends.cudnn.enabled = True
 
 # Load data from .mat file
-data = scipy.io.loadmat('data/NLS-soliton.mat')
+data = scipy.io.loadmat('data/NLS-one-soliton.mat')
 
 # Extract variables
 X = data['X']
 T = data['T']
-x0 = data['x0'].item()
-x1 = data['x1'].item()
-t0= data['t0'].item()
-t1 = data['t1'].item()
+x = data['x']
+t = data['t']
 u = data['u']
 v = data['v']
+
+# change matrix to number
+x0 = data['x0'].item()
+x1 = data['x1'].item()
+t0 = data['t0'].item()
+t1 = data['t1'].item()
 
 # Compute the magnitude of q
 norm_q_real = np.sqrt(u ** 2 + v ** 2)
@@ -54,14 +58,15 @@ norm_q_real_tensor = torch.tensor(norm_q_real, dtype=torch.float32, device=devic
 
 # Generate training data
 def generate_training_data():
-    x_ic = np.random.uniform(x_min, x_max, (N_ic, 1))
+    # x_ic = np.random.uniform(x_min, x_max, (N_ic, 1))
+    x_ic = np.random.choice(x.flatten(), (N_ic, 1))
     t_ic = np.full((N_ic, 1), t_min)
     X_ic = np.hstack([x_ic, t_ic])
 
-    u_ic = 2 * np.exp(-2j * x_ic + 1j) * np.cosh(2 * (x_ic - 2)) ** -1
-    uv_ic = np.hstack([np.real(u_ic), np.imag(u_ic)])
+    q_ic = 2 * np.exp(-2j * x_ic + 1j) * np.cosh(2 * (x_ic - 2)) ** -1
+    uv_ic = np.hstack([np.real(q_ic), np.imag(q_ic)])
 
-    t_b = np.random.uniform(t_min, t_max, (N_bc, 1))
+    t_b = np.random.choice(t.flatten(), (N_bc, 1))
     X_lb = np.hstack([np.full((N_bc, 1), x_min), t_b])
     X_ub = np.hstack([np.full((N_bc, 1), x_max), t_b])
 
@@ -133,13 +138,13 @@ def weights_init(m):
 class PINN:
 
     def __init__(self, X_ic, uv_ic, X_lb, X_ub, X_sample, device):
-        self.device = device  # 添加 device 属性
+        self.device = device  # Add device attribute
 
-        # 将数据移动到指定设备
+        # Move data to the specified device
         self.X_ic, self.uv_ic = X_ic.to(device), uv_ic.to(device)
         self.X_lb, self.X_ub, self.X_sample = X_lb.to(device), X_ub.to(device), X_sample.to(device)
 
-        # 初始化神经网络并移动到设备
+        # Initialize the neural network and move it to the device
         self.net = DNN(dim_in=2, dim_out=2, n_layer=9, n_node=40, ub=ub, lb=lb).to(device)
         self.lbfgs = torch.optim.LBFGS(
             self.net.parameters(),
@@ -181,9 +186,9 @@ class PINN:
         uv_ic_pred = self.net(self.X_ic)
         u_ic_pred, v_ic_pred = uv_ic_pred[:, 0:1], uv_ic_pred[:, 1:2]
         u_ic, v_ic = self.uv_ic[:, 0:1], self.uv_ic[:, 1:2]
-        loss_u = self.loss_fn(u_ic_pred, u_ic)
-        loss_v = self.loss_fn(v_ic_pred, v_ic)
-        return loss_u, loss_v
+        loss_u_ic = self.loss_fn(u_ic_pred, u_ic)
+        loss_v_ic = self.loss_fn(v_ic_pred, v_ic)
+        return loss_u_ic, loss_v_ic
 
     def bc_loss(self):
         X_lb, X_ub = self.X_lb.clone(), self.X_ub.clone()
@@ -205,10 +210,10 @@ class PINN:
         # mse_bc2_u = self.loss_fn(u_x_lb, u_x_ub)
         # mse_bc2_v = self.loss_fn(v_x_lb, v_x_ub)
 
-        loss_u = 0.5 * mse_bc1_u  # + mse_bc2_u
-        loss_v = 0.5 * mse_bc1_v  # + mse_bc2_v
+        loss_u_bc = mse_bc1_u  # + mse_bc2_u
+        loss_v_bc = mse_bc1_v  # + mse_bc2_v
 
-        return loss_u, loss_v
+        return loss_u_bc, loss_v_bc
 
     def pde_loss(self):
         xt = self.X_sample.clone()
@@ -233,11 +238,9 @@ class PINN:
 
         return loss_fu, loss_fv
 
-    def l2_norm_error(self):
-        # Generate grid for visualization
-        x = np.linspace(x_min, x_max, 100)
-        t = np.linspace(t_min, t_max, 100)
-        X, T = np.meshgrid(x, t)
+    def l2_norm_error(self, X=X, T=T):
+
+        # X, T = np.meshgrid(x, t)
 
         # Analytical solution
         q_exact = 2 * np.exp(-2j * X + 1j) * np.cosh(2 * (X + 4 * T)) ** -1
@@ -248,9 +251,7 @@ class PINN:
         T_tensor = torch.tensor(T.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
         q_pred = self.net(torch.cat([X_tensor, T_tensor], dim=1)).detach().cpu().numpy().reshape(X.shape[0], X.shape[1],
                                                                                                  2)  # 这里 2 的意思是实部和虚部
-        # `q_pred[..., 0]` selects all elements in all dimensions except the last one, and then selects the first element in the last dimension.
-        # `q_pred[:, 0]` would select all elements in the first dimension and the first element in the second dimension,
-        # which is not the intended operation here.
+
         u_pred, v_pred = q_pred[..., 0], q_pred[..., 1]
 
         # Compute L2 norm error
@@ -271,8 +272,8 @@ class PINN:
         loss_fu_pde, loss_fv_pde = self.pde_loss()
         loss_l2, log10_loss_l2 = self.l2_norm_error()
 
-        loss_u = loss_u_ic + loss_u_bc
-        loss_v = loss_v_ic + loss_v_bc
+        loss_u = 0.5 * loss_u_ic + 0.25 * loss_u_bc
+        loss_v = 0.5 * loss_v_ic + 0.25 * loss_v_bc
         loss_fu = loss_fu_pde
         loss_fv = loss_fv_pde
 
@@ -304,16 +305,19 @@ class PINN:
 
         if self.iter % 1000 == 0:
             print(
-                f"{self.iter}: Loss: {total_loss.item():.5e} "
+                f"-----------------------------------------------Iteration: {self.iter}-----------------------------------------------")
+            print(
+                f"Loss: {total_loss.item():.5e} "
                 f"Loss_u: {loss_u.item():.3e} Loss_v: {loss_v.item():.3e} Loss_fu: {loss_fu.item():.3e} Loss_fv: {loss_fv.item():.3e} "
                 f"L2: {loss_l2.item():.3e}"
             )
+            pinn.log_system_info(iteration)
 
         return total_loss
 
     def log_system_info(self, iteration):
         """
-        Logs memory usage and GPU memory statistics at specific iterations.
+        Logs memory usage, GPU memory statistics, and elapsed time at specific iterations.
         """
         # Get CPU memory usage
         process = psutil.Process()
@@ -328,7 +332,9 @@ class PINN:
                   f"GPU Allocated: {gpu_memory_allocated:.2f} MB, GPU Reserved: {gpu_memory_reserved:.2f} MB, "
                   f"Elapsed Time: {elapsed_time:.2f} seconds")
         else:
-            print(f"Iteration {iteration}: Memory Usage -> CPU: {memory_usage:.2f} MB")
+            elapsed_time = time.time() - start_time
+            print(f"Memory Usage -> CPU: {memory_usage:.2f} MB, "
+                  f"Elapsed Time: {elapsed_time:.2f} seconds")
 
 
 if __name__ == "__main__":
@@ -337,19 +343,15 @@ if __name__ == "__main__":
 
     # Prepare data
     X_ic, uv_ic, X_lb, X_ub, X_sample = generate_training_data()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Instantiate the PINN object
     pinn = PINN(X_ic, uv_ic, X_lb, X_ub, X_sample, device)
 
     # Adam optimization phase
-    for iteration in range(1, 1001):
+    for iteration in range(1, 2001):
         pinn.adam.step(pinn.closure)
-        if iteration % 500 == 0:  # Log every 500 iterations
-            pinn.log_system_info(iteration)
-            elapsed_time = time.time() - start_time
-            print(f"Iteration {iteration}: Elapsed Time: {elapsed_time:.2f} seconds")
-
+    print(
+        f"=================================================Adam Final=================================================")
     # Log system info after Adam phase
     pinn.log_system_info("Adam Final")
     print(f"Adam Optimization Phase: {iteration} iterations completed")
@@ -357,8 +359,10 @@ if __name__ == "__main__":
     # LBFGS fine-tuning phase
     pinn.lbfgs.step(pinn.closure)
 
+    print(
+        f"=================================================L-BFGS Final=================================================")
     # Log system info after LBFGS phase
-    pinn.log_system_info("LBFGS Final")
+    pinn.log_system_info("L-BFGS Final")
     print(f"Total Optimization Iterations: {iteration + pinn.iter} iterations completed")
 
     # Save model
@@ -387,21 +391,12 @@ if __name__ == "__main__":
         pinn, filename="l2_losses"
     )
 
-    # 5. Generate grid for visualization
-    x_min, x_max = -5, 5  # Define x-range
-    t_min, t_max = -0.5, 0.5  # Define t-range
-    x = np.linspace(x_min, x_max, 100)
-    t = np.linspace(t_min, t_max, 100)
-    X, T = np.meshgrid(x, t)
-
-    # 6. Analytical solution
+    # Analytical solution
     q_exact = 2 * np.exp(-2j * X + 1j) * np.cosh(2 * (X + 4 * T)) ** -1
     u_real, v_real = np.real(q_exact), np.imag(q_exact)
     norm_q_real = np.sqrt(u_real ** 2 + v_real ** 2)
 
-    # 7. Prediction
-    X_tensor = torch.tensor(X.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
-    T_tensor = torch.tensor(T.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
+    # Prediction solution
     q_pred = (
         pinn.net(torch.cat([X_tensor, T_tensor], dim=1))
         .detach()
@@ -413,7 +408,7 @@ if __name__ == "__main__":
     norm_q_pred = np.sqrt(u_pred ** 2 + v_pred ** 2)
     error_q = norm_q_real - norm_q_pred
 
-    # 8. 2D Heatmap of analytical solution
+    # 5. Plot 2D Heatmap of analytical solution
     plot_2d_heatmap(
         X,
         T,
@@ -423,7 +418,7 @@ if __name__ == "__main__":
         filename="heatmap_analytical_solution",
     )
 
-    # 9. 2D Heatmap of predicted solution
+    # 6. Plot 2D Heatmap of predicted solution
     plot_2d_heatmap(
         X,
         T,
@@ -433,7 +428,7 @@ if __name__ == "__main__":
         filename="heatmap_predicted_solution",
     )
 
-    # 10. 2D Heatmap of prediction error
+    # 7. Plot 2D Heatmap of prediction error
     plot_2d_heatmap(
         X,
         T,
@@ -443,7 +438,7 @@ if __name__ == "__main__":
         filename="heatmap_prediction_error",
     )
 
-    # 11. 3D Surface plot of predicted solution
+    # 8. Plot 3D Surface plot of predicted solution
     plot_3d_surface(
         X,
         T,
@@ -452,12 +447,12 @@ if __name__ == "__main__":
         filename="3d_predicted_solution",
     )
 
-    # 12. Plot comparisons of |q| at t = -0.25, 0, 0.25
+    # 9. Plot comparisons of |q| at t = -0.25, 0, 0.25
     plot_magnitude_comparison_subplots(
         pinn, times=[-0.25, 0, 0.25], filename="magnitude_comparison"
     )
 
-    # Call the function to save data
+    # Save data
     save_data_to_mat(X, T, norm_q_real, norm_q_pred, error_q)
 
     # End timing

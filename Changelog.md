@@ -2,6 +2,18 @@
 
 ## Beta Version
 
+### 0.1.2-2025.01.05
+
+#### Add
+
+1. import data by MATLAB
+
+### Optimization
+
+1. Improved the performance of the data processing algorithm.
+2. Optimized Console output information.
+3. Optimized the code structure. Deleted some redundant code.
+
 ### 0.1.1-2025.01.04
 
 #### Add
