@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import grad
 from pyDOE import lhs
-from tabulate import tabulate
+
 from mpl_toolkits.mplot3d import Axes3D
 import time
 import psutil
@@ -54,6 +54,16 @@ N_ic, N_bc, N_f = 50, 25, 10000
 X_tensor = torch.tensor(X.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
 T_tensor = torch.tensor(T.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
 norm_q_real_tensor = torch.tensor(norm_q_real, dtype=torch.float32, device=device)
+
+
+def exact_solution(X, T):
+    """
+    Computes the exact solution for the given X and T.
+    """
+    q_exact = 2 * np.exp(-2j * X + 1j) * np.cosh(2 * (X + 4 * T)) ** -1
+    u_real, v_real = np.real(q_exact), np.imag(q_exact)
+    norm_q_real = np.sqrt(u_real ** 2 + v_real ** 2)
+    return u_real, v_real, norm_q_real
 
 
 # Generate training data
@@ -243,8 +253,7 @@ class PINN:
         # X, T = np.meshgrid(x, t)
 
         # Analytical solution
-        q_exact = 2 * np.exp(-2j * X + 1j) * np.cosh(2 * (X + 4 * T)) ** -1
-        u_real, v_real = np.real(q_exact), np.imag(q_exact)
+        u_real, v_real, norm_q_real = exact_solution(X, T)
 
         # Prediction
         X_tensor = torch.tensor(X.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
@@ -392,9 +401,7 @@ if __name__ == "__main__":
     )
 
     # Analytical solution
-    q_exact = 2 * np.exp(-2j * X + 1j) * np.cosh(2 * (X + 4 * T)) ** -1
-    u_real, v_real = np.real(q_exact), np.imag(q_exact)
-    norm_q_real = np.sqrt(u_real ** 2 + v_real ** 2)
+    u_real, v_real, norm_q_real = exact_solution(X, T)
 
     # Prediction solution
     q_pred = (
