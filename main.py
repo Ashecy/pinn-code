@@ -113,6 +113,7 @@ class layer(nn.Module):
         self.activation = activation
 
     def forward(self, x):
+        x = x.to(device)  # 确保输入数据移到 GPU 上
         x = self.layer(x)
         if self.activation:
             x = self.activation(x)
@@ -127,8 +128,10 @@ class DNN(nn.Module):
         for _ in range(n_layer):
             self.net.append(layer(n_node, n_node, activation))
         self.net.append(layer(n_node, dim_out, activation=None))
+
         self.ub = torch.tensor(ub, dtype=torch.float).to(device)
         self.lb = torch.tensor(lb, dtype=torch.float).to(device)
+
         self.net.apply(weights_init)  # xavier initialization
 
     def forward(self, x):
@@ -248,12 +251,24 @@ class PINN:
 
         return loss_fu, loss_fv
 
-    def l2_norm_error(self, X=X, T=T):
+    ''' 
+    # 使用 X T会导致 cpu 占用高
+    #
+    # def l2_norm_error(self, X=X, T=T):
+    #
+    #    # X, T = np.meshgrid(x, t)
+    #
+    #    # Analytical solution
+    #    u_real, v_real, norm_q_real = exact_solution(X, T)
+    '''
 
-        # X, T = np.meshgrid(x, t)
+    def l2_norm_error(self):
+        x = np.linspace(x_min, x_max, 100)
+        t = np.linspace(t_min, t_max, 100)
+        X, T = np.meshgrid(x, t)
 
-        # Analytical solution
-        u_real, v_real, norm_q_real = exact_solution(X, T)
+        q_exact = 2 * np.exp(-2j * X + 1j) * np.cosh(2 * (X + 4 * T)) ** -1
+        u_real, v_real = np.real(q_exact), np.imag(q_exact)
 
         # Prediction
         X_tensor = torch.tensor(X.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
