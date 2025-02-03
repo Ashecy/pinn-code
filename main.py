@@ -13,6 +13,25 @@ import psutil
 import scipy.io
 from utils_plotting import *
 
+
+# 新增：定义一个同时输出到控制台和文件的类
+class Logger(object):
+    def __init__(self, filename="log.txt"):
+        self.terminal = sys.stdout
+        self.log = open(filename, "w")  # 每次运行覆盖旧文件
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+
+# 在程序开始时重定向输出
+sys.stdout = Logger("log.txt")
+
 # Check if CUDA is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
