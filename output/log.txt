@@ -1,0 +1,52 @@
+Using device: cuda
+Number of initial condition points: 50
+Number of boundary condition points (lower): 25
+Number of boundary condition points (upper): 25
+Number of total random points: 10100
+-----------------------------------------------Iteration: 1000-----------------------------------------------
+Loss: 2.60169e-02 Loss_u: 4.964e-03 Loss_v: 1.122e-02 Loss_fu: 4.133e-03 Loss_fv: 5.702e-03 L2: 1.097e+00
+Memory Usage -> CPU: 946.27 MB, GPU Allocated: 19.18 MB, GPU Reserved: 326.00 MB, Elapsed Time: 29.49 seconds
+-----------------------------------------------Iteration: 2000-----------------------------------------------
+Loss: 1.06281e-02 Loss_u: 2.377e-03 Loss_v: 5.099e-03 Loss_fu: 1.668e-03 Loss_fv: 1.483e-03 L2: 9.959e-01
+Memory Usage -> CPU: 948.28 MB, GPU Allocated: 19.18 MB, GPU Reserved: 326.00 MB, Elapsed Time: 60.12 seconds
+=================================================Adam Final=================================================
+Memory Usage -> CPU: 948.30 MB, GPU Allocated: 18.94 MB, GPU Reserved: 326.00 MB, Elapsed Time: 60.12 seconds
+Adam Optimization Phase: 2000 iterations completed
+-----------------------------------------------Iteration: 3000-----------------------------------------------
+Loss: 6.83025e-04 Loss_u: 1.307e-04 Loss_v: 1.756e-04 Loss_fu: 1.742e-04 Loss_fv: 2.026e-04 L2: 3.529e-01
+Memory Usage -> CPU: 1012.75 MB, GPU Allocated: 25.45 MB, GPU Reserved: 332.00 MB, Elapsed Time: 103.62 seconds
+-----------------------------------------------Iteration: 4000-----------------------------------------------
+Loss: 2.24331e-04 Loss_u: 3.539e-05 Loss_v: 3.898e-05 Loss_fu: 7.275e-05 Loss_fv: 7.721e-05 L2: 1.805e-01
+Memory Usage -> CPU: 1013.48 MB, GPU Allocated: 25.45 MB, GPU Reserved: 332.00 MB, Elapsed Time: 146.65 seconds
+-----------------------------------------------Iteration: 5000-----------------------------------------------
+Loss: 1.02171e-04 Loss_u: 1.300e-05 Loss_v: 1.132e-05 Loss_fu: 3.798e-05 Loss_fv: 3.987e-05 L2: 1.002e-01
+Memory Usage -> CPU: 1013.97 MB, GPU Allocated: 25.45 MB, GPU Reserved: 332.00 MB, Elapsed Time: 192.46 seconds
+-----------------------------------------------Iteration: 6000-----------------------------------------------
+Loss: 5.12766e-05 Loss_u: 5.811e-06 Loss_v: 4.210e-06 Loss_fu: 2.073e-05 Loss_fv: 2.052e-05 L2: 6.129e-02
+Memory Usage -> CPU: 1014.83 MB, GPU Allocated: 25.45 MB, GPU Reserved: 332.00 MB, Elapsed Time: 238.54 seconds
+-----------------------------------------------Iteration: 7000-----------------------------------------------
+Loss: 3.19722e-05 Loss_u: 4.477e-06 Loss_v: 2.047e-06 Loss_fu: 1.262e-05 Loss_fv: 1.283e-05 L2: 4.248e-02
+Memory Usage -> CPU: 1015.36 MB, GPU Allocated: 25.45 MB, GPU Reserved: 332.00 MB, Elapsed Time: 276.81 seconds
+-----------------------------------------------Iteration: 8000-----------------------------------------------
+Loss: 2.24420e-05 Loss_u: 2.673e-06 Loss_v: 1.497e-06 Loss_fu: 9.641e-06 Loss_fv: 8.632e-06 L2: 3.584e-02
+Memory Usage -> CPU: 1016.01 MB, GPU Allocated: 25.45 MB, GPU Reserved: 332.00 MB, Elapsed Time: 312.20 seconds
+-----------------------------------------------Iteration: 9000-----------------------------------------------
+Loss: 1.73068e-05 Loss_u: 2.098e-06 Loss_v: 1.224e-06 Loss_fu: 7.803e-06 Loss_fv: 6.181e-06 L2: 3.164e-02
+Memory Usage -> CPU: 1016.77 MB, GPU Allocated: 25.45 MB, GPU Reserved: 332.00 MB, Elapsed Time: 348.72 seconds
+-----------------------------------------------Iteration: 10000-----------------------------------------------
+Loss: 1.31431e-05 Loss_u: 1.636e-06 Loss_v: 1.057e-06 Loss_fu: 6.022e-06 Loss_fv: 4.428e-06 L2: 2.381e-02
+Memory Usage -> CPU: 1017.55 MB, GPU Allocated: 25.45 MB, GPU Reserved: 332.00 MB, Elapsed Time: 386.83 seconds
+=================================================L-BFGS Final=================================================
+Memory Usage -> CPU: 1017.63 MB, GPU Allocated: 24.82 MB, GPU Reserved: 332.00 MB, Elapsed Time: 396.93 seconds
+Total Optimization Iterations: 12238 iterations completed
+Figure saved to output\figure\sampling_points.png
+Figure saved to output\figure\training_losses.png
+Figure saved to output\figure\log10_loss_components.png
+Figure saved to output\figure\l2_losses.png
+Figure saved to output\figure\heatmap_analytical_solution.png
+Figure saved to output\figure\heatmap_predicted_solution.png
+Figure saved to output\figure\heatmap_prediction_error.png
+Figure saved to output\figure\3d_predicted_solution.png
+Figure saved to output\figure\magnitude_comparison.png
+Data saved to output\predicate_data.mat
+Total Execution Time: 415.10 seconds

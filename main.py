@@ -30,7 +30,7 @@ class Logger(object):
 
 
 # 在程序开始时重定向输出
-sys.stdout = Logger("log.txt")
+sys.stdout = Logger("output/log.txt")
 
 # Check if CUDA is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

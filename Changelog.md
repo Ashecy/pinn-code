@@ -2,6 +2,12 @@
 
 ## Beta Version
 
+### 0.1.3 -2025.02.03
+
+Fixed the issue of high GPU usage
+
+Add console log to `output/log.txt`
+
 ### 0.1.2-2025.01.05
 
 #### Add
