@@ -1,0 +1,22 @@
+# 忽略 VS Code 相关文件
+.vscode/
+
+# 忽略 PyCharm/WebStorm/IntelliJ IDEA 等 JetBrains IDE 产生的文件
+.idea/
+
+# 忽略 Python 虚拟环境
+.venv/
+venv/
+
+# 忽略 macOS 生成的文件
+.DS_Store
+
+# 忽略 log 文件
+*.log
+
+# 忽略 node_modules (如果是前端项目)
+node_modules/
+
+# 忽略 Python 缓存
+__pycache__/
+*.pyc
