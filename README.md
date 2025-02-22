@@ -1,24 +1,27 @@
 # PINN-code
-This repository is used to store the code reproduction of the papers I have read
+
+This repository is used to store the code reproduction of the papers I have read, solving PDEs by PINN and derivative
+models.
 
 If it’s useful for you, give me a star, please!
 
 ## To-do
 
-- add config to modify PDEs
-- add more models
-- plotting with MATLAB
-- upload a handbook
+- [ ] add config to modify more PDEs
+- [ ] add more models
+- [x] ~~plotting with MATLAB~~ 2025.01.04
+- [ ] upload a handbook
 
 ## Workflow
 
-My workflow is based on PyCharm 2024.3 and MATLAB R2024a. All code is run on an ASUS TUF Air 2024 (华硕天选 Air 2024) with the following hardware configuration:
+My workflow is based on PyCharm 2024.3 and MATLAB R2024a. All code is run on an ASUS TUF Gaming A14 (华硕天选 Air 2024)
+with the following device configuration: 
 
 ```
-CPU	AMD Ryzen AI 9 HX 370 w/ Radeon 890M 2.00 GH
-GPU NVIDA Geforce RTX 4060 Laptop
-RAM	32.0 GB (31.1 GB usable)
-OS Ubuntu 24.10
+CPU AMD Ryzen AI 9 HX
+GPU NVIDA 4060 Laptop
+RAM 32.0 GB
+OS Ubuntu 24.10 LTS
 ```
 
 And the Python requirements are as follows:
@@ -29,7 +32,8 @@ torch 2.5.1
 CUDA 12.4 
 scipy 1.14.1
 ```
-For more details, please refer to `requirements.txt` or `environment.yml`.
+
+For more details, please refer to `requirements.txt` or `environment.yml` in the `environment` folder.
 
 ## Contributing
 

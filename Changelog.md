@@ -2,6 +2,10 @@
 
 ## Beta Version
 
+### 0.1.4-2025.02.21
+
+Optimize code structure and separate code to module files
+
 ### 0.1.3 -2025.02.03
 
 Fixed the issue of high GPU usage
@@ -14,7 +18,7 @@ Add console log to `output/log.txt`
 
 1. import data by MATLAB
 
-### Optimization
+#### Optimization
 
 1. Improved the performance of the data processing algorithm.
 2. Optimized Console output information.
