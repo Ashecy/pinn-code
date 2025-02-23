@@ -11,24 +11,10 @@ from mpl_toolkits.mplot3d import Axes3D
 import time
 import psutil
 import scipy.io
-from utils.plotting import *
-from utils.network import *
-
-
-# 新增：定义一个同时输出到控制台和文件的类
-class Logger(object):
-    def __init__(self, filename="log.txt"):
-        self.terminal = sys.stdout
-        self.log = open(filename, "w")  # 每次运行覆盖旧文件
-
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
-
-    def flush(self):
-        self.terminal.flush()
-        self.log.flush()
-
+from utils.network import DNN
+from utils.monitor import Logger, log_system_info
+from utils.loss import LossFunctions
+from utils.plotting import Plotter
 
 # 在程序开始时重定向输出
 sys.stdout = Logger("output/log.txt")
@@ -128,13 +114,14 @@ np.random.seed(1234)
 
 class PINN:
 
-    def __init__(self, X_ic, uv_ic, X_lb, X_ub, X_sample, device):
+    def __init__(self, X_ic, uv_ic, X_lb, X_ub, X_sample, device, start_time):
         self.device = device  # Add device attribute
 
         # Move data to the specified device
         self.X_ic, self.uv_ic = X_ic.to(device), uv_ic.to(device)
         self.X_lb, self.X_ub, self.X_sample = X_lb.to(device), X_ub.to(device), X_sample.to(device)
-
+        self.lb = lb
+        self.ub = ub
         # Initialize the neural network and move it to the device
         self.net = DNN(dim_in=2, dim_out=2, n_layer=9, n_node=40, ub=ub, lb=lb).to(device)
         self.lbfgs = torch.optim.LBFGS(
@@ -148,7 +135,8 @@ class PINN:
             line_search_fn="strong_wolfe",
         )
         self.adam = torch.optim.Adam(self.net.parameters(), lr=1e-3)
-        self.loss_fn = torch.nn.MSELoss()
+        self.loss_obj = LossFunctions(self.net, self.X_ic, self.uv_ic, self.X_lb, self.X_ub,
+                                      self.X_sample, self.device, x_min, x_max, t_min, t_max)
         self.losses = {
             "loss_ic": [],
             "loss_bc": [],
@@ -168,138 +156,41 @@ class PINN:
             "log10_loss_l2": []
         }
         self.iter = 0
+        self.start_time = start_time  # 保存开始时间，用于监控
 
     def net_uv(self, xt):
         uv = self.net(xt)
         return uv[:, 0:1], uv[:, 1:2]
 
-    def ic_loss(self):
-        uv_ic_pred = self.net(self.X_ic)
-        u_ic_pred, v_ic_pred = uv_ic_pred[:, 0:1], uv_ic_pred[:, 1:2]
-        u_ic, v_ic = self.uv_ic[:, 0:1], self.uv_ic[:, 1:2]
-        loss_u_ic = self.loss_fn(u_ic_pred, u_ic)
-        loss_v_ic = self.loss_fn(v_ic_pred, v_ic)
-        return loss_u_ic, loss_v_ic
-
-    def bc_loss(self):
-        X_lb, X_ub = self.X_lb.clone(), self.X_ub.clone()
-        X_lb.requires_grad = X_ub.requires_grad = True
-
-        # Dirichlet boundary condition
-        u_lb, v_lb = self.net_uv(X_lb)
-        u_ub, v_ub = self.net_uv(X_ub)
-
-        mse_bc1_u = self.loss_fn(u_lb, u_ub)
-        mse_bc1_v = self.loss_fn(v_lb, v_ub)
-
-        # Neumann boundary condition
-        # u_x_lb = grad(u_lb.sum(), X_lb, create_graph=True)[0][:, 0:1]
-        # u_x_ub = grad(u_ub.sum(), X_ub, create_graph=True)[0][:, 0:1]
-        # v_x_lb = grad(v_lb.sum(), X_lb, create_graph=True)[0][:, 0:1]
-        # v_x_ub = grad(v_ub.sum(), X_ub, create_graph=True)[0][:, 0:1]
-        #
-        # mse_bc2_u = self.loss_fn(u_x_lb, u_x_ub)
-        # mse_bc2_v = self.loss_fn(v_x_lb, v_x_ub)
-
-        loss_u_bc = mse_bc1_u  # + mse_bc2_u
-        loss_v_bc = mse_bc1_v  # + mse_bc2_v
-
-        return loss_u_bc, loss_v_bc
-
-    def pde_loss(self):
-        xt = self.X_sample.clone()
-        xt.requires_grad = True
-
-        u, v = self.net_uv(xt)
-
-        u_xt = grad(u.sum(), xt, create_graph=True)[0]
-        u_x, u_t = u_xt[:, 0:1], u_xt[:, 1:2]
-        u_xx = grad(u_x.sum(), xt, create_graph=True)[0][:, 0:1]
-
-        v_xt = grad(v.sum(), xt, create_graph=True)[0]
-        v_x, v_t = v_xt[:, 0:1], v_xt[:, 1:2]
-        v_xx = grad(v_x.sum(), xt, create_graph=True)[0][:, 0:1]
-
-        f_v = v_t - u_xx - 2 * (u ** 2 + v ** 2) * u
-        f_u = u_t + v_xx + 2 * (u ** 2 + v ** 2) * v
-
-        f_target = torch.zeros_like(f_u)
-        loss_fu = self.loss_fn(f_u, f_target)
-        loss_fv = self.loss_fn(f_v, f_target)
-
-        return loss_fu, loss_fv
-
-    ''' 
-    # 使用 X T会导致 cpu 占用高
-    #
-    # def l2_norm_error(self, X=X, T=T):
-    #
-    #    # X, T = np.meshgrid(x, t)
-    #
-    #    # Analytical solution
-    #    u_real, v_real, norm_q_real = exact_solution(X, T)
-    '''
-
-    def l2_norm_error(self):
-        x = np.linspace(x_min, x_max, 100)
-        t = np.linspace(t_min, t_max, 100)
-        X, T = np.meshgrid(x, t)
-
-        q_exact = 2 * np.exp(-2j * X + 1j) * np.cosh(2 * (X + 4 * T)) ** -1
-        u_real, v_real = np.real(q_exact), np.imag(q_exact)
-
-        # Prediction
-        X_tensor = torch.tensor(X.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
-        T_tensor = torch.tensor(T.flatten(), dtype=torch.float32, device=device).unsqueeze(-1)
-        q_pred = self.net(torch.cat([X_tensor, T_tensor], dim=1)).detach().cpu().numpy().reshape(X.shape[0], X.shape[1],
-                                                                                                 2)  # 这里 2 的意思是实部和虚部
-
-        u_pred, v_pred = q_pred[..., 0], q_pred[..., 1]
-
-        # Compute L2 norm error
-        norm_exact = torch.sqrt(torch.sum(torch.tensor(u_real ** 2 + v_real ** 2, dtype=torch.float32)))
-        norm_diff = torch.sqrt(
-            torch.sum(torch.tensor((u_pred - u_real) ** 2 + (v_pred - v_real) ** 2, dtype=torch.float32)))
-        loss_l2 = norm_diff / norm_exact
-        log10_loss_l2 = torch.log10(loss_l2 + 1e-7)
-
-        return loss_l2, log10_loss_l2
-
     def closure(self):
         self.lbfgs.zero_grad()
         self.adam.zero_grad()
 
-        loss_u_ic, loss_v_ic = self.ic_loss()
-        loss_u_bc, loss_v_bc = self.bc_loss()
-        loss_fu_pde, loss_fv_pde = self.pde_loss()
-        loss_l2, log10_loss_l2 = self.l2_norm_error()
+        loss_u_ic, loss_v_ic = self.loss_obj.ic_loss()
+        loss_u_bc, loss_v_bc = self.loss_obj.bc_loss()
+        loss_fu, loss_fv = self.loss_obj.pde_loss()
+        loss_l2, log10_loss_l2 = self.loss_obj.l2_norm_loss()
 
         loss_u = 0.5 * loss_u_ic + 0.25 * loss_u_bc
         loss_v = 0.5 * loss_v_ic + 0.25 * loss_v_bc
-        loss_fu = loss_fu_pde
-        loss_fv = loss_fv_pde
 
         total_loss = loss_u + loss_v + loss_fu + loss_fv
         total_loss.backward()
 
-        # Record losses
         self.losses["loss_ic"].append((loss_u_ic + loss_v_ic).detach().cpu().item())
         self.losses["loss_bc"].append((loss_u_bc + loss_v_bc).detach().cpu().item())
-        self.losses["loss_pde"].append((loss_fu_pde + loss_fv_pde).detach().cpu().item())
+        self.losses["loss_pde"].append((loss_fu + loss_fv).detach().cpu().item())
         self.losses["log10_loss_ic"].append(torch.log10(loss_u_ic + loss_v_ic + 1e-7).detach().cpu().item())
         self.losses["log10_loss_bc"].append(torch.log10(loss_u_bc + loss_v_bc + 1e-7).detach().cpu().item())
-        self.losses["log10_loss_pde"].append(torch.log10(loss_fu_pde + loss_fv_pde + 1e-7).detach().cpu().item())
-
+        self.losses["log10_loss_pde"].append(torch.log10(loss_fu + loss_fv + 1e-7).detach().cpu().item())
         self.losses["loss_u"].append(loss_u.detach().cpu().item())
         self.losses["loss_v"].append(loss_v.detach().cpu().item())
         self.losses["loss_fu"].append(loss_fu.detach().cpu().item())
         self.losses["loss_fv"].append(loss_fv.detach().cpu().item())
-
         self.losses["log10_loss_u"].append(torch.log10(loss_u + 1e-7).detach().cpu().item())
         self.losses["log10_loss_v"].append(torch.log10(loss_v + 1e-7).detach().cpu().item())
         self.losses["log10_loss_fu"].append(torch.log10(loss_fu + 1e-7).detach().cpu().item())
         self.losses["log10_loss_fv"].append(torch.log10(loss_fv + 1e-7).detach().cpu().item())
-
         self.losses["loss_l2"].append(loss_l2.detach().cpu().item())
         self.losses["log10_loss_l2"].append(log10_loss_l2.detach().cpu().item())
 
@@ -308,35 +199,14 @@ class PINN:
         if self.iter % 1000 == 0:
             print(
                 f"-----------------------------------------------Iteration: {self.iter}-----------------------------------------------")
-            print(
-                f"Loss: {total_loss.item():.5e} "
-                f"Loss_u: {loss_u.item():.3e} Loss_v: {loss_v.item():.3e} Loss_fu: {loss_fu.item():.3e} Loss_fv: {loss_fv.item():.3e} "
-                f"L2: {loss_l2.item():.3e}"
-            )
-            pinn.log_system_info(iteration)
+            print(f"Loss: {total_loss.item():.5e} "
+                  f"Loss_u: {loss_u.item():.3e} Loss_v: {loss_v.item():.3e} "
+                  f"Loss_fu: {loss_fu.item():.3e} Loss_fv: {loss_fv.item():.3e} "
+                  f"L2: {loss_l2.item():.3e}")
+            # 使用 monitor.log_system_info 记录监控信息
+            log_system_info(self.device, self.start_time, iteration=self.iter)
 
         return total_loss
-
-    def log_system_info(self, iteration):
-        """
-        Logs memory usage, GPU memory statistics, and elapsed time at specific iterations.
-        """
-        # Get CPU memory usage
-        process = psutil.Process()
-        memory_usage = process.memory_info().rss / (1024 ** 2)  # in MB
-
-        # Get GPU memory usage (if CUDA is available)
-        if torch.cuda.is_available():
-            gpu_memory_allocated = torch.cuda.memory_allocated(device) / (1024 ** 2)  # in MB
-            gpu_memory_reserved = torch.cuda.memory_reserved(device) / (1024 ** 2)  # in MB
-            elapsed_time = time.time() - start_time
-            print(f"Memory Usage -> CPU: {memory_usage:.2f} MB, "
-                  f"GPU Allocated: {gpu_memory_allocated:.2f} MB, GPU Reserved: {gpu_memory_reserved:.2f} MB, "
-                  f"Elapsed Time: {elapsed_time:.2f} seconds")
-        else:
-            elapsed_time = time.time() - start_time
-            print(f"Memory Usage -> CPU: {memory_usage:.2f} MB, "
-                  f"Elapsed Time: {elapsed_time:.2f} seconds")
 
 
 if __name__ == "__main__":
@@ -347,7 +217,7 @@ if __name__ == "__main__":
     X_ic, uv_ic, X_lb, X_ub, X_sample = generate_training_data()
 
     # Instantiate the PINN object
-    pinn = PINN(X_ic, uv_ic, X_lb, X_ub, X_sample, device)
+    pinn = PINN(X_ic, uv_ic, X_lb, X_ub, X_sample, device, start_time)
 
     # Adam optimization phase
     for iteration in range(1, 2001):
@@ -355,7 +225,7 @@ if __name__ == "__main__":
     print(
         f"=================================================Adam Final=================================================")
     # Log system info after Adam phase
-    pinn.log_system_info("Adam Final")
+    log_system_info(pinn.device, start_time, label="Adam Final")
     print(f"Adam Optimization Phase: {iteration} iterations completed")
 
     # LBFGS fine-tuning phase
@@ -364,7 +234,7 @@ if __name__ == "__main__":
     print(
         f"=================================================L-BFGS Final=================================================")
     # Log system info after LBFGS phase
-    pinn.log_system_info("L-BFGS Final")
+    log_system_info(pinn.device, start_time, label="L-BFGS Final")
     print(f"Total Optimization Iterations: {iteration + pinn.iter} iterations completed")
 
     # Save model
@@ -372,25 +242,26 @@ if __name__ == "__main__":
     torch.save(pinn.net.state_dict(), "output/weight.pt")
 
     # ============================== plotting ==============================
-
+    # Instantiate Plotter with the losses dictionary from pinn
+    plotter = Plotter(losses=pinn.losses)
     # 1. Plot sampling points
-    plot_sampling_points(
+    plotter.plot_sampling_points(
         pinn.X_ic, pinn.X_lb, pinn.X_ub, pinn.X_sample, filename="sampling_points"
     )
 
     # 2. Plot training losses
-    plotLoss(
+    plotter.plotLoss(
         pinn.losses, info=["IC", "BC", "PDE"], filename="training_losses"
     )
 
     # 3. Plot log10 of loss components
-    plot_log10_losses(
-        pinn, filename="log10_loss_components"
+    plotter.plot_log10_losses(
+        filename="log10_loss_components"
     )
 
     # 4. Plot L2 norm losses
-    plot_l2_losses(
-        pinn, filename="l2_losses"
+    plotter.plot_l2_losses(
+        filename="l2_losses"
     )
 
     # Analytical solution
@@ -409,7 +280,7 @@ if __name__ == "__main__":
     error_q = norm_q_real - norm_q_pred
 
     # 5. Plot 2D Heatmap of analytical solution
-    plot_2d_heatmap(
+    plotter.plot_2d_heatmap(
         X,
         T,
         norm_q_real,
@@ -419,7 +290,7 @@ if __name__ == "__main__":
     )
 
     # 6. Plot 2D Heatmap of predicted solution
-    plot_2d_heatmap(
+    plotter.plot_2d_heatmap(
         X,
         T,
         norm_q_pred,
@@ -429,7 +300,7 @@ if __name__ == "__main__":
     )
 
     # 7. Plot 2D Heatmap of prediction error
-    plot_2d_heatmap(
+    plotter.plot_2d_heatmap(
         X,
         T,
         error_q,
@@ -439,7 +310,7 @@ if __name__ == "__main__":
     )
 
     # 8. Plot 3D Surface plot of predicted solution
-    plot_3d_surface(
+    plotter.plot_3d_surface(
         X,
         T,
         norm_q_pred,
@@ -448,12 +319,12 @@ if __name__ == "__main__":
     )
 
     # 9. Plot comparisons of |q| at t = -0.25, 0, 0.25
-    plot_magnitude_comparison_subplots(
+    plotter.plot_magnitude_comparison_subplots(
         pinn, times=[-0.25, 0, 0.25], filename="magnitude_comparison"
     )
 
     # Save data
-    save_data_to_mat(X, T, norm_q_real, norm_q_pred, error_q)
+    plotter.save_data_to_mat(X, T, norm_q_real, norm_q_pred, error_q)
 
     # End timing
     end_time = time.time()
