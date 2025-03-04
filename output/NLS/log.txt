@@ -1,0 +1,28 @@
+Using device: cuda
+Number of initial condition points: 50
+Number of boundary condition points (lower): 25
+Number of boundary condition points (upper): 25
+Number of total random points: 10100
+-----------------------------------------------Iteration: 1000-----------------------------------------------
+Loss: 2.32245e-02 Loss_u: 5.054e-03 Loss_v: 1.130e-02 Loss_fu: 3.467e-03 Loss_fv: 3.407e-03 L2: 1.111e+00
+Memory Usage -> CPU: 946.05 MB, GPU Allocated: 19.18 MB, GPU Reserved: 326.00 MB, Elapsed Time: 27.71 seconds
+-----------------------------------------------Iteration: 2000-----------------------------------------------
+Loss: 1.35796e-02 Loss_u: 2.512e-03 Loss_v: 5.670e-03 Loss_fu: 2.989e-03 Loss_fv: 2.410e-03 L2: 1.008e+00
+Memory Usage -> CPU: 947.73 MB, GPU Allocated: 19.18 MB, GPU Reserved: 326.00 MB, Elapsed Time: 51.69 seconds
+=================================================Adam Final=================================================
+Adam Final: Memory Usage -> CPU: 947.74 MB, GPU Allocated: 18.94 MB, GPU Reserved: 326.00 MB, Elapsed Time: 51.69 seconds
+Adam Optimization Phase: 2000 iterations completed
+================================================L-BFGS Final================================================
+L-BFGS Final: Memory Usage -> CPU: 972.44 MB, GPU Allocated: 18.94 MB, GPU Reserved: 326.00 MB, Elapsed Time: 51.72 seconds
+Total Optimization Iterations: 4001 iterations completed
+Figure saved to output/NLS\figures\sampling_points.png
+Figure saved to output/NLS\figures\training_losses.png
+Figure saved to output/NLS\figures\log10_loss_components.png
+Figure saved to output/NLS\figures\l2_losses.png
+Figure saved to output/NLS\figures\heatmap_analytical_solution.png
+Figure saved to output/NLS\figures\heatmap_predicted_solution.png
+Figure saved to output/NLS\figures\heatmap_prediction_error.png
+Figure saved to output/NLS\figures\3d_predicted_solution.png
+Figure saved to output/NLS\figures\magnitude_comparison.png
+Data saved to output/NLS\predicate_data.mat
+Total Execution Time: 63.20 seconds
