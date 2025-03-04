@@ -1,27 +1,17 @@
-# PINN-code
+# PINNs
 
-This repository is used to store the code reproduction of the papers I have read, solving PDEs by PINN and derivative
-models.
+This repository is used to store the PINN code reproduction of the papers I have read, and record my inspirations and ideas.
 
 If it’s useful for you, give me a star, please!
 
-## To-do
-
-- [ ] add config to modify more PDEs
-- [ ] add more models
-- [x] ~~plotting with MATLAB~~ 2025.01.04
-- [ ] upload a handbook
-
 ## Workflow
 
-My workflow is based on PyCharm 2024.3 and MATLAB R2024a. All code is run on an ASUS TUF Gaming A14 (华硕天选 Air 2024)
-with the following device configuration: 
+My workflow is based on PyCharm 2024.3 and MATLAB R2024a. All code is run on an ASUS TUF Gaming A14 (华硕天选 Air 2024). with the following device configuration:
 
 ```
 CPU AMD Ryzen AI 9 HX
 GPU NVIDA 4060 Laptop
 RAM 32.0 GB
-OS Ubuntu 24.10 LTS
 ```
 
 And the Python requirements are as follows:
@@ -37,9 +27,17 @@ For more details, please refer to `requirements.txt` or `environment.yml` in the
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request.
+Contributions are welcome! Please open a [new issue](https://github.com/IceySwan/PINNs/issues/new) or submit a  [Pull Request](https://github.com/IceySwan/PINNs/pulls).
 
-## Acknowledgements
+## Credits
+
+### Contributors
+
+<a href="https://github.com/IceySwan/PINNs/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=IceySwan/PINNs" />
+</a>
+
+### JetBrains
 
 [![PyCharm](https://resources.jetbrains.com/storage/products/company/brand/logos/PyCharm_icon.svg)](https://www.jetbrains.com/pycharm/)
 
@@ -47,4 +45,4 @@ Contributions are welcome! Please open an issue or submit a pull request.
 
 こんなにかわいいのにスターくれないの？⭐
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Ashecy/pinn-code&type=Date)](https://star-history.com/#Ashecy/pinn-code&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Iceyswan/PINNs&type=Date)](https://star-history.com/#IceySwan/PINNs&Date)
