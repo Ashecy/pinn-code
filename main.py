@@ -1,23 +1,21 @@
 import sys
-
+import time
 from pathlib import Path
+
 import numpy as np
+import scipy.io
 import torch
-import torch.nn as nn
-from torch.autograd import grad
 from pyDOE import lhs
 
-from mpl_toolkits.mplot3d import Axes3D
-import time
-import psutil
-import scipy.io
-from utils.network import DNN
-from utils.monitor import Logger, log_system_info
 from utils.loss import LossFunctions
+from utils.monitor import Logger, log_system_info
+from utils.network import DNN
 from utils.plotting import Plotter
 
+# Define the directory for saving figures and data
+save_directory = "output/NLS"
 # 在程序开始时重定向输出
-sys.stdout = Logger("output/log.txt")
+sys.stdout = Logger("output/NLS/log.txt")
 
 # Check if CUDA is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -232,18 +230,19 @@ if __name__ == "__main__":
     pinn.lbfgs.step(pinn.closure)
 
     print(
-        f"=================================================L-BFGS Final=================================================")
+        f"================================================L-BFGS Final================================================")
     # Log system info after LBFGS phase
     log_system_info(pinn.device, start_time, label="L-BFGS Final")
     print(f"Total Optimization Iterations: {iteration + pinn.iter} iterations completed")
 
     # Save model
     Path("output").mkdir(parents=True, exist_ok=True)
-    torch.save(pinn.net.state_dict(), "output/weight.pt")
+    torch.save(pinn.net.state_dict(), f"{save_directory}/weight.pt")
 
     # ============================== plotting ==============================
     # Instantiate Plotter with the losses dictionary from pinn
-    plotter = Plotter(losses=pinn.losses)
+    plotter = Plotter(losses=pinn.losses, directory=save_directory)
+
     # 1. Plot sampling points
     plotter.plot_sampling_points(
         pinn.X_ic, pinn.X_lb, pinn.X_ub, pinn.X_sample, filename="sampling_points"
